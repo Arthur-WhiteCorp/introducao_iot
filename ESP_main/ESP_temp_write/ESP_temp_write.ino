@@ -3,6 +3,7 @@
 #include <DallasTemperature.h>
 #include <SPI.h>
 #include <SD.h>
+#include <ICC316Bluetooth.h>
 
 // Data wire is plugged into port 2 on the ESP
 #define ONE_WIRE_BUS 7
