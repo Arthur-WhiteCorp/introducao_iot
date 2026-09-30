@@ -1,115 +1,138 @@
-// Include the libraries we need
+#include <Arduino.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <SPI.h>
 #include <SD.h>
-#include <ICC316Bluetooth.h>
+#include <cmath>
+#include "ICC316Bluetooth.h"
 
-// Data wire is plugged into port 2 on the ESP
+// Hardware Pin Definitions
 #define ONE_WIRE_BUS 7
+#define SD_CS        2
+#define SD_MOSI      34
+#define SD_MISO      19
+#define SD_SCK       5
 
-
-#define SD_CS   2
-#define SD_MOSI 34
-#define SD_MISO 19
-#define SD_SCK  5
-
-// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+// Instance Initialization
 OneWire oneWire(ONE_WIRE_BUS);
-
-// Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
 SPIClass sdSPI(HSPI);
 
-void rawSdProbe() {
-  pinMode(SD_CS, OUTPUT);
-  digitalWrite(SD_CS, HIGH);
-  sdSPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-  sdSPI.beginTransaction(SPISettings(400000, MSBFIRST, SPI_MODE0));
-
-  for (int i = 0; i < 10; i++) sdSPI.transfer(0xFF);  // 80 clocks, CS high
-
-  digitalWrite(SD_CS, LOW);
-  uint8_t cmd0[] = {0x40, 0x00, 0x00, 0x00, 0x00, 0x95};
-  for (uint8_t b : cmd0) sdSPI.transfer(b);
-
-  uint8_t r = 0xFF;
-  for (int i = 0; i < 10 && r == 0xFF; i++) r = sdSPI.transfer(0xFF);
-
-  digitalWrite(SD_CS, HIGH);
-  sdSPI.endTransaction();
-  Serial.printf("CMD0 response: 0x%02X\n", r);
-}
+// Configuration parameters
+const unsigned long SAMPLE_INTERVAL_MS = 900000; // 15 minutes between reads
 
 /*
- * The setup function. We only start the sensors here
+ * Helper function to ensure SD Card CSV header exists
  */
-void setup(void)
-{
-  // start serial port
-  Serial.begin(115200);
-  Serial.println("Dallas Temperature IC Control Library Demo");
-/*
-  for (int i = 0; i < 30; i++) {
-  rawSdProbe();
-  delay(300);
-}
-  */
-  // Start up the library
-  sensors.begin();
+void setupSDCard() {
   sdSPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-  while (!SD.begin(SD_CS, sdSPI)) {
-    Serial.println("SD Card Mount Failed!");
-    delay(200);
+  
+  int attempts = 0;
+  while (!SD.begin(SD_CS, sdSPI) && attempts < 5) {
+    Serial.println("SD Card Mount Failed! Retrying...");
+    delay(500);
+    attempts++;
   }
-  uint8_t cardType = SD.cardType();
-  if (cardType == CARD_NONE) {
-    Serial.println("No SD card attached");
+
+  if (attempts >= 5) {
+    Serial.println("Warning: SD Card failed to initialize. System will continue without logging.");
     return;
   }
-  
+
+  uint8_t cardType = SD.cardType();
+  if (cardType == CARD_NONE) {
+    Serial.println("No SD card attached.");
+    return;
+  }
+
   Serial.println("SD Card Mounted Successfully!");
+
+  // Create header if CSV does not exist
   if (!SD.exists("/data.csv")) {
-  File headerFile = SD.open("/data.csv", FILE_WRITE);
-  if (headerFile) {
-    headerFile.println("Timestamp_ms,Temperature_C");
-    headerFile.close();
+    File headerFile = SD.open("/data.csv", FILE_WRITE);
+    if (headerFile) {
+      headerFile.println("Timestamp_ms,Temperature_C,pH,Turbidity");
+      headerFile.close();
+      Serial.println("Created /data.csv with header.");
+    }
   }
 }
+
+/*
+ * Helper function to log sensor data locally to SD Card
+ */
+bool logToSD(const String& timestamp, float tempC, float ph, float turbidity) {
+  File csvFile = SD.open("/data.csv", FILE_APPEND);
+  if (!csvFile) {
+    Serial.println("Error: Could not open /data.csv for writing.");
+    return false;
+  }
+
+  csvFile.print(timestamp);
+  csvFile.print(",");
+  csvFile.print(tempC, 2);
+  csvFile.print(",");
+  
+  if (isnan(ph)) csvFile.print("NA");
+  else csvFile.print(ph, 2);
+  
+  csvFile.print(",");
+  if (isnan(turbidity)) csvFile.print("NA");
+  else csvFile.print(turbidity, 2);
+
+  csvFile.println();
+  csvFile.close();
+
+  Serial.println("CSV Logged locally to SD Card.");
+  return true;
 }
 
-void loop(void) {
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Initializing Environmental Sensing Node...");
+
+  // Start Temperature Sensor
+  sensors.begin();
+
+  // Initialize SD Card
+  setupSDCard();
+
+  Serial.println("Setup Complete. Entering main loop...");
+}
+
+void loop() {
+  // 1. Read Sensors
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
 
+  // Set pH and Turbidity to NAN (Not A Number) if sensors are not yet connected
+  float ph = NAN; 
+  float turbidity = NAN;
+
   if (tempC != DEVICE_DISCONNECTED_C) {
-    // Open CSV file in append mode
-    File csvFile = SD.open("/data.csv", FILE_APPEND);
+    // Generate timestamp string from uptime in milliseconds
+    String timestampStr = String(millis());
 
-    if (csvFile) {
-      unsigned long currentMillis = millis();
+    Serial.printf("\n--- New Reading [%s ms] ---\n", timestampStr.c_str());
+    Serial.printf("Temperature: %.2f °C\n", tempC);
 
-      // Write row: Milliseconds, Temperature
-      csvFile.print(currentMillis);
-      csvFile.print(",");
-      csvFile.println(tempC, 2); // Limit precision to 2 decimal places
-      csvFile.close();           // Ensure data flushes to hardware
+    // 2. Persistent Local Storage
+    logToSD(timestampStr, tempC, ph, turbidity);
 
-      Serial.print("CSV Logged -> ");
-      Serial.print(currentMillis);
-      Serial.print(" ms | ");
-      Serial.print(tempC);
-      Serial.println(" °C");
+    // 3. Wireless Transmission over BLE
+    Serial.println("Attempting BLE transmission to Raspberry Pi Gateway...");
+    bool bleSuccess = sendMeasurement(timestampStr, tempC, ph, turbidity);
+
+    if (bleSuccess) {
+      Serial.println("BLE Transmission: SUCCESS (ACK received)");
     } else {
-      while(!csvFile) {
-        csvFile = SD.open("/data.csv", FILE_APPEND);
-        Serial.println("Error: Could not open /data.csv for writing.");
-        delay(200);
-      }
+      Serial.println("BLE Transmission: FAILED or TIMED OUT");
     }
+
   } else {
-    Serial.println("Error: DS18B20 disconnected. Check 4.7k resistor & wiring.");
+    Serial.println("Error: DS18B20 disconnected. Check 4.7k pull-up resistor & wiring.");
   }
 
-  delay(900000); // Adjust sample interval as needed
+  // 4. Wait for next measurement cycle
+  delay(SAMPLE_INTERVAL_MS);
 }
