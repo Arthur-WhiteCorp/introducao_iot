@@ -4,7 +4,8 @@
 #include <SPI.h>
 #include <SD.h>
 #include <cmath>
-#include "ICC316Bluetooth.h"
+#include "Bluetooth.h"
+#include "config.h"
 
 // Hardware Pin Definitions
 #define ONE_WIRE_BUS 7
@@ -87,6 +88,16 @@ bool logToSD(const String& timestamp, float tempC, float ph, float turbidity) {
   return true;
 }
 
+void transmitData(String timestamp, float temp, float ph, float turbidity) {
+#if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
+  sendMeasurement(timestamp, temp, ph, turbidity); // BLE logic
+#elif (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
+  sendWiFiHTTP(timestamp, temp, ph, turbidity);    // Wi-Fi logic
+#elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
+  sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
+#endif
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Initializing Environmental Sensing Node...");
@@ -121,7 +132,7 @@ void loop() {
 
     // 3. Wireless Transmission over BLE
     Serial.println("Attempting BLE transmission to Raspberry Pi Gateway...");
-    bool bleSuccess = sendMeasurement(timestampStr, tempC, ph, turbidity);
+    bool bleSuccess = transmitData(timestampStr, tempC, ph, turbidity);
 
     if (bleSuccess) {
       Serial.println("BLE Transmission: SUCCESS (ACK received)");
