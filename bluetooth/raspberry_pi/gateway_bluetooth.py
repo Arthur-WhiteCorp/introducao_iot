@@ -5,6 +5,7 @@ import json
 import math
 
 from bleak import BleakClient, BleakScanner
+from bleak.exc import BleakError
 from config import (
     BLUETOOTH_INTERFACE, SERVICE_UUID, MEASUREMENT_UUID, ACK_UUID,
     DEVICE_NAME_PREFIX, SCAN_TIMEOUT_S, MEASUREMENT_TIMEOUT_S
@@ -49,70 +50,110 @@ def store(data):
 
 
 async def handle_device(device):
-    print(f"Conectando a {device.name} [{device.address}]")
-    async with BleakClient(
-        device,
-        bluez={"adapter": BLUETOOTH_INTERFACE}
-    ) as client:
-        if not client.is_connected:
-            return
+    print(f"\nConectando a {device.name} [{device.address}]...")
+    
+    try:
+        async with BleakClient(
+            device,
+            bluez={"adapter": BLUETOOTH_INTERFACE},
+            timeout=15.0
+        ) as client:
+            if not client.is_connected:
+                print(f"Falha ao conectar com {device.name}.")
+                return
 
-        event = asyncio.Event()
-        received = {}
+            print(f"Conectado a {device.name}. Aguardando medição...")
 
-        def notification_callback(_, data):
+            event = asyncio.Event()
+            received = {}
+
+            def notification_callback(_, data):
+                try:
+                    received["data"] = json.loads(bytes(data).decode("utf-8"))
+                    event.set()
+                except (UnicodeDecodeError, json.JSONDecodeError) as err:
+                    print(f"Payload JSON corrompido recebido: {err}")
+
+            await client.start_notify(MEASUREMENT_UUID, notification_callback)
+            
             try:
-                received["data"] = json.loads(bytes(data).decode("utf-8"))
-                event.set()
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                pass
+                await asyncio.wait_for(event.wait(), timeout=MEASUREMENT_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                print(f"Timeout aguardando medição de {device.name}.")
+                return
+            finally:
+                # Garantir que a notificação seja parada se a conexão ainda estiver ativa
+                try:
+                    if client.is_connected:
+                        await client.stop_notify(MEASUREMENT_UUID)
+                except Exception:
+                    pass
 
-        await client.start_notify(MEASUREMENT_UUID, notification_callback)
-        try:
-            await asyncio.wait_for(event.wait(), timeout=MEASUREMENT_TIMEOUT_S)
-        except asyncio.TimeoutError:
-            print("Timeout aguardando medição.")
-            await client.stop_notify(MEASUREMENT_UUID)
-            return
+            data = received.get("data")
 
-        data = received["data"]
+            if not data or not validate(data):
+                print("Medição rejeitada (dados inválidos).")
+                try:
+                    await client.write_gatt_char(ACK_UUID, b"ERROR", response=True)
+                except Exception as e:
+                    print(f"Erro ao enviar ACK (ERROR): {e}")
+                return
 
-        if not validate(data):
-            print("Medição rejeitada.")
-            await client.write_gatt_char(ACK_UUID, b"ERROR", response=True)
-            return
+            # Grava os dados no arquivo CSV
+            store(data)
+            
+            # Envia confirmação de sucesso para o nó
+            try:
+                await client.write_gatt_char(ACK_UUID, b"OK", response=True)
+                print(f"Recebido, armazenado e ACK (OK) enviado: {data['node_id']} [{data['timestamp']}]")
+            except Exception as e:
+                print(f"Erro ao enviar ACK (OK): {e}")
 
-        store(data)
-        await client.write_gatt_char(ACK_UUID, b"OK", response=True)
-
-        print(f"Recebido e armazenado: {data['node_id']} {data['timestamp']}")
-        await client.stop_notify(MEASUREMENT_UUID)
+    except BleakError as exc:
+        print(f"Erro de BLE ao processar {device.name}: {exc}")
+    except Exception as exc:
+        print(f"Erro inesperado em {device.name}: {exc}")
 
 
 async def main():
     ensure_csv()
-    print("Procurando nós ICC316 via BLE...")
+    print(f"Iniciando Gateway BLE contínuo na interface [{BLUETOOTH_INTERFACE}]...")
+    print("Pressione Ctrl+C para interromper.\n")
 
-    devices = await BleakScanner.discover(
-        timeout=SCAN_TIMEOUT_S,
-        bluez={"adapter": BLUETOOTH_INTERFACE}
-    )
-
-    candidates = [
-        d for d in devices
-        if d.name and d.name.startswith(DEVICE_NAME_PREFIX)
-    ]
-
-    if not candidates:
-        print("Nenhum nó ICC316 encontrado.")
-        return
-
-    for device in candidates:
+    while True:
         try:
-            await handle_device(device)
+            print("Procurando nós ICC316 via BLE...")
+            devices = await BleakScanner.discover(
+                timeout=SCAN_TIMEOUT_S,
+                bluez={"adapter": BLUETOOTH_INTERFACE}
+            )
+
+            candidates = [
+                d for d in devices
+                if d.name and d.name.startswith(DEVICE_NAME_PREFIX)
+            ]
+
+            if not candidates:
+                print("Nenhum nó ICC316 encontrado neste ciclo.")
+            else:
+                print(f"Encontrado(s) {len(candidates)} nó(s). Processando...")
+                for device in candidates:
+                    await handle_device(device)
+
+        except BleakError as exc:
+            print(f"Erro no adaptador Bluetooth durante a busca: {exc}")
+            # Aguarda alguns segundos para o stack BlueZ se recuperar
+            await asyncio.sleep(5)
         except Exception as exc:
-            print(f"Erro ao processar {device.name}: {exc}")
+            print(f"Erro inesperado no loop principal: {exc}")
+            await asyncio.sleep(5)
+
+        # Breve pausa entre os ciclos de varredura
+        await asyncio.sleep(2)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nGateway finalizado pelo usuário.")
