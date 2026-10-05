@@ -1,4 +1,4 @@
-#include "ICC316WiFi.h"
+#include "WiFi.h"
 
 #include <WiFi.h>
 #include <HTTPClient.h>
