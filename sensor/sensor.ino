@@ -98,6 +98,23 @@ void transmitData(String timestamp, float temp, float ph, float turbidity) {
 #endif
 }
 
+String formatMillis(unsigned long currentTimeMillis) {
+  // Calculate time components
+  unsigned long totalSeconds = currentTimeMillis / 1000;
+  unsigned long days = totalSeconds / 86400;
+  totalSeconds %= 86400;
+  unsigned long hours = totalSeconds / 3600;
+  totalSeconds %= 3600;
+  unsigned long minutes = totalSeconds / 60;
+  unsigned long seconds = totalSeconds % 60;
+
+  // Format into day:hour:minute:second string
+  return String(days) + ":" + 
+         String(hours) + ":" + 
+         String(minutes) + ":" + 
+         String(seconds);
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Initializing Environmental Sensing Node...");
@@ -122,7 +139,7 @@ void loop() {
 
   if (tempC != DEVICE_DISCONNECTED_C) {
     // Generate timestamp string from uptime in milliseconds
-    String timestampStr = String(millis());
+    String timestampStr = formatMillis(millis());
 
     Serial.printf("\n--- New Reading [%s ms] ---\n", timestampStr.c_str());
     Serial.printf("Temperature: %.2f °C\n", tempC);
