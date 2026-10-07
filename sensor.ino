@@ -21,8 +21,8 @@ DallasTemperature sensors(&oneWire);
 SPIClass sdSPI(HSPI);
 
 // Configuration parameters
-const unsigned long SAMPLE_INTERVAL_MS = 900000; // 15 minutes between reads
-
+const unsigned long SAMPLE_INTERVAL_MS = 10000;
+String transmissionType;
 /*
  * Helper function to ensure SD Card CSV header exists
  */
@@ -89,13 +89,16 @@ bool logToSD(const String& timestamp, float tempC, float ph, float turbidity) {
   return true;
 }
 
-bool transmitData(String timestamp, float temp, float ph, float turbidity) {
+bool
+transmitData(String timestamp, float temp, float ph, float turbidity) {
 #if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
-  sendMeasurementBle(timestamp, temp, ph, turbidity); // BLE logic
+  return sendMeasurementBle(timestamp, temp, ph, turbidity); // BLE logic
 #elif (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
-  sendMeasurementWifi(timestamp, temp, ph, turbidity);    // Wi-Fi logic
+  return sendMeasurementWifi(timestamp, temp, ph, turbidity);    // Wi-Fi logic
 //#elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
-  //sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
+  //return sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
+#elif
+  return false
 #endif
 }
 
@@ -126,6 +129,22 @@ void setup() {
   // Initialize SD Card
   setupSDCard();
 
+  
+  if(ACTIVE_COMM_MODE == COMM_MODE_BLE)
+  {
+    transmissionType = "Bluetooth";
+  }
+    
+  if(ACTIVE_COMM_MODE == COMM_MODE_WIFI)
+  {
+    transmissionType = "WiFi";
+  }
+  if(ACTIVE_COMM_MODE == COMM_MODE_LORA)
+  {
+    transmissionType = "Lora";
+  }
+    
+
   Serial.println("Setup Complete. Entering main loop...");
 }
 
@@ -149,13 +168,14 @@ void loop() {
     logToSD(timestampStr, tempC, ph, turbidity);
 
     // 3. Wireless Transmission over BLE
-    Serial.println("Attempting BLE transmission to Raspberry Pi Gateway...");
-    bool bleSuccess = transmitData(timestampStr, tempC, ph, turbidity);
+    Serial.println("Attempting transmission to Gateway via:");
+    Serial.printf("%s", transmissionType);
+    bool success = transmitData(timestampStr, tempC, ph, turbidity);
 
-    if (bleSuccess) {
-      Serial.println("BLE Transmission: SUCCESS (ACK received)");
+    if (success) {
+      Serial.println("Transmission: SUCCESS (ACK received)");
     } else {
-      Serial.println("BLE Transmission: FAILED or TIMED OUT");
+      Serial.println("Transmission: FAILED or TIMED OUT");
     }
 
   } else {

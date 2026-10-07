@@ -31,12 +31,12 @@
 // ============================================================================
 // WI-FI CONFIGURATION (HTTP / API Endpoint)
 // ============================================================================
-#define WIFI_SSID                         "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD                     "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID                         "AndroidAP6D68"
+#define WIFI_PASSWORD                     "hpqis4103"
 #define WIFI_HTTP_ENDPOINT                "http://192.168.1.100:5000/api/data"
 #define WIFI_TIMEOUT_MS           15000  // 15 seconds
 #define GATEWAY_PORT                      5000
-#define GATEWAY_IP                        "0.0.0.0"
+#define GATEWAY_IP                        "10.213.219.125"
 #define HTTP_TIMEOUT_MS              5000   // 5 seconds
 // ============================================================================
 // LORA CONFIGURATION (Heltec WiFi LoRa 32 V3 - SX1262 Radio)

@@ -7,6 +7,8 @@
 #include "config.h"
 
 
+
+
 // -------------------------------------------------------------
 // Garante que o ESP32 esteja conectado ao Wi-Fi
 // -------------------------------------------------------------
@@ -16,6 +18,9 @@ bool ensureWiFiConnection()
     if (WiFi.status() == WL_CONNECTED) {
         return true;
     }
+
+    WiFi.disconnect(true);
+    delay(100);
 
     WiFi.mode(WIFI_STA);
 
