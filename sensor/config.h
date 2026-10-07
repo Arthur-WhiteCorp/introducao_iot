@@ -9,7 +9,7 @@
 #define COMM_MODE_LORA  2
 
 // Select active mode (COMM_MODE_BLE, COMM_MODE_WIFI, or COMM_MODE_LORA)
-#define ACTIVE_COMM_MODE COMM_MODE_BLE
+#define ACTIVE_COMM_MODE COMM_MODE_WIFI
 
 // ============================================================================
 // GENERAL NODE CONFIGURATION
@@ -19,7 +19,6 @@
 // ============================================================================
 // BLUETOOTH LOW ENERGY (BLE) CONFIGURATION
 // ============================================================================
-#if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
   #define BLUETOOTH_DEVICE_NAME             "ICC316-G-NODE1"
   #define BLUETOOTH_SERVICE_UUID            "7d8f0001-3160-4b12-9a10-000000000001"
   #define BLUETOOTH_MEASUREMENT_UUID        "7d8f0002-3160-4b12-9a10-000000000002"
@@ -28,23 +27,20 @@
   
   #define BLUETOOTH_CONNECTION_TIMEOUT_MS   10000  // 10 seconds
   #define BLUETOOTH_ACK_TIMEOUT_MS          5000   // 5 seconds
-#endif
 
 // ============================================================================
 // WI-FI CONFIGURATION (HTTP / API Endpoint)
 // ============================================================================
-#if (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
-  #define WIFI_SSID                         "YOUR_WIFI_SSID"
-  #define WIFI_PASSWORD                     "YOUR_WIFI_PASSWORD"
-  #define WIFI_HTTP_ENDPOINT                "http://192.168.1.100:5000/api/data"
-  #define WIFI_CONNECT_TIMEOUT_MS           15000  // 15 seconds
-  #define WIFI_HTTP_TIMEOUT_MS              5000   // 5 seconds
-#endif
+  #define WIFI_SSID                         "AURora"
+  #define WIFI_PASSWORD                     "breakOS1"
+  #define GATEWAY_IP                        "10.42.0.79"
+  #define GATEWAY_PORT                      "5000"
+  #define WIFI_TIMEOUT_MS                   15000  // 15 seconds
+  #define HTTP_TIMEOUT_MS                   5000   // 5 seconds
 
 // ============================================================================
 // LORA CONFIGURATION (Heltec WiFi LoRa 32 V3 - SX1262 Radio)
 // ============================================================================
-#if (ACTIVE_COMM_MODE == COMM_MODE_LORA)
   // RF Parameters
   #define LORA_FREQUENCY                    915E6  // Hz (915MHz Americas, 868MHz Europe)
   #define LORA_BANDWIDTH                    125.0  // kHz
@@ -63,6 +59,5 @@
   #define LORA_MISO_PIN                     11     // SPI MISO
   #define LORA_MOSI_PIN                     10     // SPI MOSI
   #define LORA_VEXT_PIN                     36     // Power Control (Active Low)
-#endif
 
 #endif // CONFIG_H

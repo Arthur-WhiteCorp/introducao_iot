@@ -16,7 +16,7 @@
  *   ph          - pH; usar NAN se indisponível
  *   turbidity   - turbidez; usar NAN se indisponível
  */
-bool sendMeasurement(
+bool sendWiFiHTTP(
     const String& timestamp,
     float temperature,
     float ph,

@@ -1,4 +1,4 @@
-#include "WiFi.h"
+#include "ICC316WiFi.h"
 
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -45,7 +45,7 @@ bool ensureWiFiConnection()
 // Envia uma medição para o Raspberry Pi
 // -------------------------------------------------------------
 
-bool sendMeasurement(
+bool sendWiFiHTTP(
     const String& timestamp,
     float temperature,
     float ph,

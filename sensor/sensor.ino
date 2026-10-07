@@ -6,6 +6,7 @@
 #include <cmath>
 #include "Bluetooth.h"
 #include "config.h"
+#include "ICC316WiFi.h"
 
 // Hardware Pin Definitions
 #define ONE_WIRE_BUS 7
@@ -88,14 +89,10 @@ bool logToSD(const String& timestamp, float tempC, float ph, float turbidity) {
   return true;
 }
 
-void transmitData(String timestamp, float temp, float ph, float turbidity) {
-#if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
-  sendMeasurement(timestamp, temp, ph, turbidity); // BLE logic
-#elif (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
+bool transmitData(const String& timestamp, float temp, float ph, float turbidity) {
+//  sendMeasurement(timestamp, temp, ph, turbidity); // BLE logic
   sendWiFiHTTP(timestamp, temp, ph, turbidity);    // Wi-Fi logic
-#elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
-  sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
-#endif
+//  sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
 }
 
 String formatMillis(unsigned long currentTimeMillis) {
