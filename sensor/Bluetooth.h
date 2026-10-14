@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-bool sendMeasurement(
+bool sendMeasurementBle(
     const String& timestamp,
     float temperature,
     float ph,

@@ -82,7 +82,7 @@ bool waitForConnection() {
 }
 }
 
-bool sendMeasurement(
+bool sendMeasurementBle(
     const String& timestamp,
     float temperature,
     float ph,
