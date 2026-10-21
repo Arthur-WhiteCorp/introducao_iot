@@ -1,8 +1,8 @@
 #include "Bluetooth.h"
-
 #include <NimBLEDevice.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "esp32_wifi.hpp"
 
 namespace {
 NimBLEServer* server = nullptr;

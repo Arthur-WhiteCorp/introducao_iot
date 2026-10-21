@@ -31,33 +31,41 @@
 // ============================================================================
 // WI-FI CONFIGURATION (HTTP / API Endpoint)
 // ============================================================================
-#define WIFI_SSID                         "AndroidAP6D68"
-#define WIFI_PASSWORD                     "hpqis4103"
-#define WIFI_HTTP_ENDPOINT                "http://192.168.1.100:5000/api/data"
+#define WIFI_SSID                        "AndroidAP6D68"
+#define WIFI_PASSWORD                    "hpqis4103"
 #define WIFI_TIMEOUT_MS           15000  // 15 seconds
 #define GATEWAY_PORT                      5000
-#define GATEWAY_IP                        "10.213.219.125"
+#define GATEWAY_IP                        "10.203.219.125"
 #define HTTP_TIMEOUT_MS              5000   // 5 seconds
 // ============================================================================
 // LORA CONFIGURATION (Heltec WiFi LoRa 32 V3 - SX1262 Radio)
 // ============================================================================
   // RF Parameters
-#define LORA_FREQUENCY                    915E6  // Hz (915MHz Americas, 868MHz Europe)
-#define LORA_BANDWIDTH                    125.0  // kHz
-#define LORA_SPREADING_FACTOR             7      // 6 - 12
-#define LORA_CODING_RATE                  5      // 4/5
-#define LORA_SYNC_WORD                    0x12   // Private network sync word
-#define LORA_PREAMBLE_LENGTH              8      // Symbols
-#define LORA_TX_POWER                     14     // dBm (max 22 dBm)
+#ifndef ICC316_LORA_CONFIG_H
+#define ICC316_LORA_CONFIG_H
 
-  // Heltec V3 ESP32-S3 Pin Mapping for SX1262 Radio
-#define LORA_CS_PIN                       8      // Chip Select (NSS)
-#define LORA_RST_PIN                      12     // Reset
-#define LORA_DIO1_PIN                     14     // Interrupt
-#define LORA_BUSY_PIN                     13     // Radio Busy
-#define LORA_SCK_PIN                      9      // SPI Clock
-#define LORA_MISO_PIN                     11     // SPI MISO
-#define LORA_MOSI_PIN                     10     // SPI MOSI
-#define LORA_VEXT_PIN                     36     // Power Control (Active Low)
+#define NODE_ID "grupo_01"
+
+#define LORA_CS_PIN 8
+#define LORA_DIO1_PIN 14
+#define LORA_RST_PIN 12
+#define LORA_BUSY_PIN 13
+
+#define LORA_FREQUENCY_MHZ 915.0
+#define LORA_BANDWIDTH_KHZ 125.0
+#define LORA_SPREADING_FACTOR 7
+
+// RadioLib usa 5 para representar coding rate 4/5.
+#define LORA_CODING_RATE 5
+
+#define LORA_SYNC_WORD 0x12
+#define LORA_OUTPUT_POWER_DBM 14
+#define LORA_PREAMBLE_LENGTH 8
+
+// TCXO da Heltec V3.
+#define LORA_TCXO_VOLTAGE 1.8
+
+#define LORA_ACK_TIMEOUT_MS 5000
+#define LORA_ACK_OK "OK"
 
 #endif // CONFIG_H

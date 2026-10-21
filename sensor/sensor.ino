@@ -5,8 +5,11 @@
 #include <SD.h>
 #include <cmath>
 #include "Bluetooth.h"
+
+//#include "ICC316WiFi.h"
+#include "esp32_wifi.hpp"
 #include "config.h"
-#include "ICC316WiFi.h"
+
 
 // Hardware Pin Definitions
 #define ONE_WIRE_BUS 7
@@ -94,7 +97,7 @@ transmitData(String timestamp, float temp, float ph, float turbidity) {
 #if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
   return sendMeasurementBle(timestamp, temp, ph, turbidity); // BLE logic
 #elif (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
-  return sendMeasurementWifi(timestamp, temp, ph, turbidity);    // Wi-Fi logic
+  return sendMeasurement(timestamp, temp, ph, turbidity);    // Wi-Fi logic
 //#elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
   //return sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
 #elif
@@ -150,6 +153,7 @@ void setup() {
 
 void loop() {
   // 1. Read Sensors
+  //printAvailableNetworks();
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
 
@@ -169,7 +173,7 @@ void loop() {
 
     // 3. Wireless Transmission over BLE
     Serial.println("Attempting transmission to Gateway via:");
-    Serial.printf("%s", transmissionType);
+    Serial.printf("%s\n", transmissionType);
     bool success = transmitData(timestampStr, tempC, ph, turbidity);
 
     if (success) {
