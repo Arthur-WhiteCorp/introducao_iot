@@ -9,7 +9,7 @@
 #define COMM_MODE_LORA  2
 
 // Select active mode (COMM_MODE_BLE, COMM_MODE_WIFI, or COMM_MODE_LORA)
-#define ACTIVE_COMM_MODE COMM_MODE_WIFI
+#define ACTIVE_COMM_MODE COMM_MODE_LORA
 
 // ============================================================================
 // GENERAL NODE CONFIGURATION
@@ -41,8 +41,6 @@
 // LORA CONFIGURATION (Heltec WiFi LoRa 32 V3 - SX1262 Radio)
 // ============================================================================
   // RF Parameters
-#ifndef ICC316_LORA_CONFIG_H
-#define ICC316_LORA_CONFIG_H
 
 #define NODE_ID "grupo_01"
 
@@ -65,7 +63,7 @@
 // TCXO da Heltec V3.
 #define LORA_TCXO_VOLTAGE 1.8
 
-#define LORA_ACK_TIMEOUT_MS 5000
+#define LORA_ACK_TIMEOUT_MS 60000
 #define LORA_ACK_OK "OK"
 
 #endif // CONFIG_H

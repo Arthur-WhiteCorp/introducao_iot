@@ -14,7 +14,7 @@ SX1262 radio = new Module(8, 14, 12, 13);
 #define LORA_TCXO_VOLTAGE 1.8
 
 #define SERIAL_BAUDRATE 115200
-#define LORA_RX_TIMEOUT_MS 30000
+#define LORA_RX_TIMEOUT_MS 60000
 
 void setup() {
     Serial.begin(SERIAL_BAUDRATE);
@@ -39,13 +39,11 @@ void setup() {
 void loop() {
     String payload;
     int16_t state = radio.receive(payload, LORA_RX_TIMEOUT_MS);
-
+    
     if (state != RADIOLIB_ERR_NONE) {
-        if (state != RADIOLIB_ERR_RX_TIMEOUT)
-            Serial.printf("RADIO_ERROR:%d\n", state);
+        if (state != RADIOLIB_ERR_RX_TIMEOUT) Serial.printf("RADIO_ERROR:%d\n", state);
         return;
     }
-
     Serial.print("DATA:");
     Serial.println(payload);
 

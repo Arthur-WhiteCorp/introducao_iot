@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-bool sendMeasurement(
+bool sendMeasurementLora(
     const String& timestamp,
     float temperature,
     float ph,

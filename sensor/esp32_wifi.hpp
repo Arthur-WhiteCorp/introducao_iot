@@ -16,7 +16,7 @@
 #endif
 
 #ifndef GATEWAY_IP
-#define GATEWAY_IP      "10.203.219.125"
+#define GATEWAY_IP      "10.42.0.79"
 #endif
 
 #ifndef GATEWAY_PORT

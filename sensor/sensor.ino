@@ -8,6 +8,7 @@
 
 //#include "ICC316WiFi.h"
 #include "esp32_wifi.hpp"
+#include "ICC316LoRa.h"
 #include "config.h"
 
 
@@ -24,7 +25,7 @@ DallasTemperature sensors(&oneWire);
 SPIClass sdSPI(HSPI);
 
 // Configuration parameters
-const unsigned long SAMPLE_INTERVAL_MS = 10000;
+const unsigned long SAMPLE_INTERVAL_MS = 60000;
 String transmissionType;
 /*
  * Helper function to ensure SD Card CSV header exists
@@ -98,8 +99,8 @@ transmitData(String timestamp, float temp, float ph, float turbidity) {
   return sendMeasurementBle(timestamp, temp, ph, turbidity); // BLE logic
 #elif (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
   return sendMeasurement(timestamp, temp, ph, turbidity);    // Wi-Fi logic
-//#elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
-  //return sendLoRaPacket(timestamp, temp, ph, turbidity);  // LoRa logic
+#elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
+  return sendMeasurementLora(timestamp, temp, ph, turbidity);  // LoRa logic
 #elif
   return false
 #endif
