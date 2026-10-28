@@ -106,6 +106,7 @@ bool sendMeasurementBT(
 
     String payload;
     serializeJson(doc, payload);
+    Serial.println(payload);
 
     ackReceived = false;
     measurementCharacteristic->setValue(payload.c_str());

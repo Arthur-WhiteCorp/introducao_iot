@@ -51,6 +51,7 @@ bool sendMeasurementLR(
 
     String payload;
     serializeJson(doc, payload);
+    Serial.println(payload);   
 
     int16_t state = radio.transmit(payload);
     if (state != RADIOLIB_ERR_NONE) return false;
