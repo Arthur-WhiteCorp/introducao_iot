@@ -2,13 +2,14 @@
 
 SX1262 radio = new Module(8, 14, 12, 13);
 
-// Estes parâmetros devem ser iguais aos utilizados pelo nó sensor.
 #define LORA_FREQUENCY_MHZ 915.0
 #define LORA_BANDWIDTH_KHZ 125.0
 #define LORA_SPREADING_FACTOR 7
-// RadioLib: 5 = coding rate 4/5.
 #define LORA_CODING_RATE 5
-#define LORA_SYNC_WORD 0x12
+
+// FIXED: SX1262 uses 16-bit sync words. 0x1424 is Private LoRa network.
+#define LORA_SYNC_WORD 0x1424 
+
 #define LORA_OUTPUT_POWER_DBM 14
 #define LORA_PREAMBLE_LENGTH 8
 #define LORA_TCXO_VOLTAGE 1.8
@@ -20,7 +21,6 @@ void setup() {
     Serial.begin(SERIAL_BAUDRATE);
     delay(1000);
 
-    // A ponte usa a mesma configuração LoRa do nó sensor.
     int16_t state = radio.begin(
         LORA_FREQUENCY_MHZ, LORA_BANDWIDTH_KHZ,
         LORA_SPREADING_FACTOR, LORA_CODING_RATE,
@@ -41,9 +41,15 @@ void loop() {
     int16_t state = radio.receive(payload, LORA_RX_TIMEOUT_MS);
     
     if (state != RADIOLIB_ERR_NONE) {
-        if (state != RADIOLIB_ERR_RX_TIMEOUT) Serial.printf("RADIO_ERROR:%d\n", state);
+        if (state != RADIOLIB_ERR_RX_TIMEOUT) {
+            Serial.printf("RADIO_ERROR:%d\n", state);
+        }
         return;
     }
+
+    // FIXED: Clean trailing non-printable characters or whitespace from the buffer
+    payload.trim();
+
     Serial.print("DATA:");
     Serial.println(payload);
 
@@ -51,6 +57,7 @@ void loop() {
 
     while (millis() - start < 5000) {
         if (Serial.available()) {
+            // FIXED: Listen for newline '\n' instead of null character '\0'
             String command = Serial.readStringUntil('\n');
             command.trim();
 

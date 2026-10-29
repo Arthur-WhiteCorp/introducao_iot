@@ -10,7 +10,6 @@
 
 // Select active mode (COMM_MODE_BLE, COMM_MODE_WIFI, or COMM_MODE_LORA)
 #define ACTIVE_COMM_MODE COMM_MODE_LORA
-
 // ============================================================================
 // GENERAL NODE CONFIGURATION
 // ============================================================================
@@ -31,11 +30,11 @@
 // ============================================================================
 // WI-FI CONFIGURATION (HTTP / API Endpoint)
 // ============================================================================
-#define WIFI_SSID                        "AndroidAP6D68"
-#define WIFI_PASSWORD                    "hpqis4103"
+#define WIFI_SSID                        "labmaker-03"
+#define WIFI_PASSWORD                    "maker123"
 #define WIFI_TIMEOUT_MS           15000  // 15 seconds
 #define GATEWAY_PORT                      5000
-#define GATEWAY_IP                        "10.203.219.125"
+#define GATEWAY_IP                        "10.42.0.79"
 #define HTTP_TIMEOUT_MS              5000   // 5 seconds
 // ============================================================================
 // LORA CONFIGURATION (Heltec WiFi LoRa 32 V3 - SX1262 Radio)
@@ -56,7 +55,7 @@
 // RadioLib usa 5 para representar coding rate 4/5.
 #define LORA_CODING_RATE 5
 
-#define LORA_SYNC_WORD 0x12
+#define LORA_SYNC_WORD 0x1424
 #define LORA_OUTPUT_POWER_DBM 14
 #define LORA_PREAMBLE_LENGTH 8
 

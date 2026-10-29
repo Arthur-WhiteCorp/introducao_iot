@@ -25,7 +25,7 @@ DallasTemperature sensors(&oneWire);
 SPIClass sdSPI(HSPI);
 
 // Configuration parameters
-const unsigned long SAMPLE_INTERVAL_MS = 60000;
+const unsigned long SAMPLE_INTERVAL_MS = 30000;
 String transmissionType;
 /*
  * Helper function to ensure SD Card CSV header exists
