@@ -3,6 +3,8 @@
 #include <DallasTemperature.h>
 #include <SPI.h>
 #include <SD.h>
+#include <Wire.h>
+#include <RTClib.h>
 #include <cmath>
 #include "Bluetooth.h"
 
@@ -11,22 +13,54 @@
 #include "ICC316LoRa.h"
 #include "config.h"
 
-
 // Hardware Pin Definitions
 #define ONE_WIRE_BUS 7
 #define SD_CS        2
 #define SD_MOSI      34
 #define SD_MISO      19
 #define SD_SCK       5
+#define I2C_SDA      41
+#define I2C_SCL      42
 
 // Instance Initialization
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 SPIClass sdSPI(HSPI);
+RTC_DS3231 rtc;
 
 // Configuration parameters
 const unsigned long SAMPLE_INTERVAL_MS = 30000;
 String transmissionType;
+
+/*
+ * Helper function to initialize the DS3231 RTC module
+ */
+void setupRTC() {
+  Wire.begin(I2C_SDA, I2C_SCL);
+  if (!rtc.begin(&Wire)) {
+    Serial.println("Error: Could not find DS3231 RTC module!");
+    return;
+  }
+
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power! Setting time to compile time...");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+  Serial.println("RTC DS3231 initialized successfully.");
+}
+
+/*
+ * Generate ISO 8601 formatted timestamp string from RTC (YYYY-MM-DDTHH:MM:SS)
+ */
+String getISOTimestamp() {
+  DateTime now = rtc.now();
+  char buf[25];
+  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d",
+           now.year(), now.month(), now.day(),
+           now.hour(), now.minute(), now.second());
+  return String(buf);
+}
+
 /*
  * Helper function to ensure SD Card CSV header exists
  */
@@ -57,7 +91,7 @@ void setupSDCard() {
   if (!SD.exists("/data.csv")) {
     File headerFile = SD.open("/data.csv", FILE_WRITE);
     if (headerFile) {
-      headerFile.println("Timestamp_ms,Temperature_C,pH,Turbidity");
+      headerFile.println("Timestamp,Temperature_C,pH,Turbidity");
       headerFile.close();
       Serial.println("Created /data.csv with header.");
     }
@@ -93,34 +127,16 @@ bool logToSD(const String& timestamp, float tempC, float ph, float turbidity) {
   return true;
 }
 
-bool
-transmitData(String timestamp, float temp, float ph, float turbidity) {
+bool transmitData(String timestamp, float temp, float ph, float turbidity) {
 #if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
   return sendMeasurementBle(timestamp, temp, ph, turbidity); // BLE logic
 #elif (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
   return sendMeasurement(timestamp, temp, ph, turbidity);    // Wi-Fi logic
 #elif (ACTIVE_COMM_MODE == COMM_MODE_LORA)
   return sendMeasurementLora(timestamp, temp, ph, turbidity);  // LoRa logic
-#elif
-  return false
+#else
+  return false;
 #endif
-}
-
-String formatMillis(unsigned long currentTimeMillis) {
-  // Calculate time components
-  unsigned long totalSeconds = currentTimeMillis / 1000;
-  unsigned long days = totalSeconds / 86400;
-  totalSeconds %= 86400;
-  unsigned long hours = totalSeconds / 3600;
-  totalSeconds %= 3600;
-  unsigned long minutes = totalSeconds / 60;
-  unsigned long seconds = totalSeconds % 60;
-
-  // Format into day:hour:minute:second string
-  return String(days) + ":" + 
-         String(hours) + ":" + 
-         String(minutes) + ":" + 
-         String(seconds);
 }
 
 void setup() {
@@ -133,28 +149,27 @@ void setup() {
   // Initialize SD Card
   setupSDCard();
 
-  
-  if(ACTIVE_COMM_MODE == COMM_MODE_BLE)
+  // Initialize DS3231 RTC
+  setupRTC();
+
+  if (ACTIVE_COMM_MODE == COMM_MODE_BLE)
   {
     transmissionType = "Bluetooth";
   }
-    
-  if(ACTIVE_COMM_MODE == COMM_MODE_WIFI)
+  if (ACTIVE_COMM_MODE == COMM_MODE_WIFI)
   {
     transmissionType = "WiFi";
   }
-  if(ACTIVE_COMM_MODE == COMM_MODE_LORA)
+  if (ACTIVE_COMM_MODE == COMM_MODE_LORA)
   {
     transmissionType = "Lora";
   }
-    
 
   Serial.println("Setup Complete. Entering main loop...");
 }
 
 void loop() {
   // 1. Read Sensors
-  //printAvailableNetworks();
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
 
@@ -163,18 +178,17 @@ void loop() {
   float turbidity = NAN;
 
   if (tempC != DEVICE_DISCONNECTED_C) {
-    // Generate timestamp string from uptime in milliseconds
-    String timestampStr = formatMillis(millis());
+    // Generate ISO 8601 timestamp string from DS3231 RTC
+    String timestampStr = getISOTimestamp();
 
-    Serial.printf("\n--- New Reading [%s ms] ---\n", timestampStr.c_str());
+    Serial.printf("\n--- New Reading [%s] ---\n", timestampStr.c_str());
     Serial.printf("Temperature: %.2f °C\n", tempC);
 
     // 2. Persistent Local Storage
     logToSD(timestampStr, tempC, ph, turbidity);
 
-    // 3. Wireless Transmission over BLE
-    Serial.println("Attempting transmission to Gateway via:");
-    Serial.printf("%s\n", transmissionType);
+    // 3. Wireless Transmission
+    Serial.printf("Attempting transmission to Gateway via: %s\n", transmissionType.c_str());
     bool success = transmitData(timestampStr, tempC, ph, turbidity);
 
     if (success) {
