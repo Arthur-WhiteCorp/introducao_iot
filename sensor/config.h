@@ -62,7 +62,7 @@
 // TCXO da Heltec V3.
 #define LORA_TCXO_VOLTAGE 1.8
 
-#define LORA_ACK_TIMEOUT_MS 60000
+#define LORA_ACK_TIMEOUT_MS 5000
 #define LORA_ACK_OK "OK"
 
 #endif // CONFIG_H
