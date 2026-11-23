@@ -111,7 +111,7 @@ void setupRTC() {
 String getISOTimestamp() {
   DateTime now = rtc.now();
   char buf[25];
-  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d",
+  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02dZ",
            now.year(), now.month(), now.day(),
            now.hour(), now.minute(), now.second());
   return String(buf);
